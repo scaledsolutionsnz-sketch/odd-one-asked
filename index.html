@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1E4A42">
+<meta name="description" content="A pass-and-play party game: everyone answers a question, one of you secretly got a different one.">
+<title>Odd One Asked</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=DM+Mono:wght@500&display=swap">
+<style>
+  /* One committed look: a card table. Felt green, ivory cards, marigold for the hand that's in play. */
+  :root {
+    color-scheme: dark;
+    --felt: #1E4A42;
+    --felt-deep: #153630;
+    --felt-line: #2F6157;
+    --card: #FBF6EA;
+    --card-edge: #E6DCC4;
+    --ink: #1C2421;
+    --ink-soft: #55615C;
+    --chalk: #EAF2EE;
+    --chalk-dim: #A9C2BA;
+    --marigold: #F2B33D;
+    --marigold-deep: #C98A12;
+    --odd: #E0574B;
+    --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+    --body: "Figtree", "Helvetica Neue", Arial, sans-serif;
+    --mono: "DM Mono", ui-monospace, Menlo, monospace;
+  }
+  html, body { height: 100%; }
+  body {
+    background:
+      radial-gradient(120% 80% at 50% 0%, #245A50 0%, transparent 60%),
+      repeating-linear-gradient(45deg, rgba(255,255,255,.012) 0 2px, transparent 2px 5px),
+      var(--felt);
+    color: var(--chalk);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.5;
+    padding-inline: 16px;
+  }
+  .table { max-width: 520px; margin: 0 auto; padding-block: 20px 40px; display: flex; flex-direction: column; gap: 20px; min-height: 100%; }
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .wordmark { font-family: var(--display); font-weight: 800; font-size: 22px; letter-spacing: -.01em; display: flex; align-items: center; gap: 10px; }
+  .wordmark .pip { width: 26px; height: 34px; border-radius: 5px; background: var(--card); position: relative; transform: rotate(-8deg); box-shadow: 8px 2px 0 -1px var(--odd); }
+  .wordmark .pip::after { content: "?"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink); font-size: 18px; }
+  .round-tag { font-family: var(--mono); font-size: 13px; color: var(--chalk-dim); letter-spacing: .04em; }
+  h1, h2 { font-family: var(--display); font-weight: 800; letter-spacing: -.02em; line-height: 1.05; margin: 0; text-wrap: balance; }
+  h1 { font-size: clamp(34px, 9vw, 46px); }
+  h2 { font-size: clamp(26px, 7vw, 34px); }
+  p { margin: 0; }
+  .lede { color: var(--chalk-dim); font-size: 17px; max-width: 46ch; }
+  .label { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--chalk-dim); }
+
+  .btn { appearance: none; border: 0; cursor: pointer; font: 700 17px/1 var(--body); padding: 17px 22px; border-radius: 14px; background: var(--marigold); color: #2A1C00; width: 100%; transition: transform .12s ease, background .2s ease; box-shadow: 0 4px 0 var(--marigold-deep); }
+  .btn:hover { background: #F6C056; }
+  .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--marigold-deep); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: 0 4px 0 var(--marigold-deep); }
+  .btn.ghost { background: transparent; color: var(--chalk); box-shadow: inset 0 0 0 2px var(--felt-line); }
+  .btn.ghost:hover { background: rgba(255,255,255,.05); }
+  .btn.small { width: auto; padding: 10px 14px; font-size: 14px; border-radius: 10px; }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--marigold); outline-offset: 3px; }
+
+  /* Setup */
+  .stepper { display: grid; grid-template-columns: 56px 1fr 56px; align-items: center; gap: 12px; background: var(--felt-deep); border-radius: 18px; padding: 10px; }
+  .stepper button { height: 56px; border-radius: 12px; border: 0; background: var(--felt-line); color: var(--chalk); font: 700 28px/1 var(--display); cursor: pointer; }
+  .stepper button:disabled { opacity: .35; cursor: not-allowed; }
+  .stepper output { text-align: center; font: 800 48px/1 var(--display); font-variant-numeric: tabular-nums; }
+  .stepper output small { display: block; font: 600 12px/1.6 var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--chalk-dim); }
+  .names { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .names input { width: 100%; box-sizing: border-box; padding: 13px 14px; border-radius: 12px; border: 2px solid var(--felt-line); background: var(--felt-deep); color: var(--chalk); font: 500 16px var(--body); }
+  .names input::placeholder { color: #7FA097; }
+  .rules { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; counter-reset: r; }
+  .rules li { counter-increment: r; display: grid; grid-template-columns: 30px 1fr; gap: 10px; color: var(--chalk-dim); font-size: 15px; }
+  .rules li::before { content: counter(r); width: 26px; height: 26px; border-radius: 50%; background: var(--felt-line); color: var(--chalk); display: grid; place-items: center; font: 700 13px var(--mono); }
+
+  /* The card */
+  .handoff { text-align: center; display: grid; gap: 14px; justify-items: center; padding-top: 6vh; }
+  .handoff .who { font-family: var(--display); font-weight: 800; font-size: clamp(40px, 12vw, 60px); color: var(--marigold); line-height: 1; }
+  .card-wrap { perspective: 1200px; }
+  .qcard { position: relative; width: 100%; aspect-ratio: 5 / 6; max-width: 100%; border-radius: 22px; transform-style: preserve-3d; transition: transform .45s cubic-bezier(.2,.7,.2,1); user-select: none; -webkit-user-select: none; touch-action: none; cursor: pointer; }
+  .qcard.up { transform: rotateY(180deg); }
+  .qcard .face { position: absolute; inset: 0; border-radius: 22px; backface-visibility: hidden; -webkit-backface-visibility: hidden; display: grid; padding: 26px; box-sizing: border-box; }
+  .qcard .back { background: repeating-linear-gradient(135deg, #234F47 0 10px, #1D453E 10px 20px); border: 8px solid var(--card); box-shadow: 0 18px 40px -18px rgba(0,0,0,.6); place-items: center; text-align: center; }
+  .qcard .back .hold { font-family: var(--display); font-weight: 700; font-size: 22px; color: var(--card); display: grid; gap: 10px; justify-items: center; }
+  .qcard .back .ring { width: 74px; height: 74px; border-radius: 50%; border: 3px dashed var(--marigold); display: grid; place-items: center; font-size: 30px; }
+  .qcard .front { background: var(--card); color: var(--ink); transform: rotateY(180deg); box-shadow: inset 0 0 0 2px var(--card-edge), 0 18px 40px -18px rgba(0,0,0,.6); align-content: space-between; }
+  .qcard .front .corner { font: 500 13px var(--mono); color: var(--ink-soft); letter-spacing: .05em; }
+  .qcard .front .q { font-family: var(--display); font-weight: 700; font-size: clamp(25px, 6.6vw, 32px); line-height: 1.12; letter-spacing: -.01em; text-wrap: balance; }
+  .qcard .front .hint { font-size: 14px; color: var(--ink-soft); }
+  .answer-row { display: grid; gap: 10px; }
+  .answer-row input { width: 100%; box-sizing: border-box; padding: 16px; border-radius: 14px; border: 2px solid var(--felt-line); background: var(--felt-deep); color: var(--chalk); font: 600 18px var(--body); }
+  .peek-note { text-align: center; font-size: 14px; color: var(--chalk-dim); }
+
+  /* Reveal */
+  .asked { background: var(--card); color: var(--ink); border-radius: 18px; padding: 18px 20px; display: grid; gap: 6px; box-shadow: 0 12px 30px -16px rgba(0,0,0,.6); }
+  .asked .label { color: var(--ink-soft); }
+  .asked .q { font: 700 22px/1.2 var(--display); text-wrap: balance; }
+  .answers { display: grid; gap: 10px; }
+  .ans { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 14px; background: var(--felt-deep); border: 2px solid transparent; }
+  .ans .name { font-weight: 700; }
+  .ans .said { font: 700 18px var(--display); text-align: right; overflow-wrap: anywhere; }
+  .ans.pick { cursor: pointer; transition: border-color .15s ease, background .15s ease; }
+  .ans.pick:hover { border-color: var(--felt-line); }
+  .ans.chosen { border-color: var(--marigold); background: #234A42; }
+  .ans.odd { border-color: var(--odd); background: #3A2A26; }
+  .ans .tag { display: inline-block; margin-left: 8px; font: 700 11px var(--body); letter-spacing: .08em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: var(--odd); color: #fff; vertical-align: 2px; }
+  .timer { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--felt-deep); border-radius: 14px; padding: 12px 14px; }
+  .timer .clock { font: 500 30px/1 var(--mono); font-variant-numeric: tabular-nums; }
+  .timer .clock.low { color: var(--odd); }
+
+  /* Verdict + scores */
+  .verdict { text-align: center; display: grid; gap: 10px; padding-top: 8px; }
+  .verdict .big { font-family: var(--display); font-weight: 800; font-size: clamp(32px, 9vw, 44px); line-height: 1.05; }
+  .verdict .big.win { color: var(--marigold); }
+  .verdict .big.lose { color: var(--odd); }
+  .oddq { background: var(--card); color: var(--ink); border-radius: 18px; padding: 16px 20px; display: grid; gap: 6px; text-align: left; border-left: 0; box-shadow: inset 0 0 0 3px var(--odd); }
+  .oddq .label { color: #9A3A31; }
+  .oddq .q { font: 700 20px/1.2 var(--display); }
+  .scores { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .scores li { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 10px 14px; border-radius: 12px; background: var(--felt-deep); }
+  .scores .pts { font: 500 18px var(--mono); font-variant-numeric: tabular-nums; }
+  .scores .delta { font: 500 13px var(--mono); color: var(--marigold); min-width: 28px; text-align: right; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .row > * { flex: 1 1 160px; }
+  .stack { display: grid; gap: 14px; }
+  .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--felt-deep); border-radius: 14px; padding: 6px; }
+  .modes button { border: 0; border-radius: 10px; padding: 12px 8px; background: transparent; color: var(--chalk-dim); font: 700 15px var(--body); cursor: pointer; }
+  .modes button[aria-pressed="true"] { background: var(--card); color: var(--ink); }
+  .names.texting { grid-template-columns: 1fr; }
+  .names .pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 8px; }
+  .send-list { display: grid; gap: 10px; }
+  .send-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; padding: 12px 12px 12px 16px; border-radius: 14px; background: var(--felt-deep); border: 2px solid transparent; }
+  .send-row.done { border-color: var(--felt-line); }
+  .send-row .who2 { font-weight: 700; }
+  .send-row .num { display: block; font: 500 13px var(--mono); color: var(--chalk-dim); }
+  .send-row .acts { display: flex; gap: 6px; }
+  a.btn { display: inline-block; text-align: center; text-decoration: none; box-sizing: border-box; }
+  .solo { min-height: 100%; }
+  .fade-in { animation: rise .35s ease both; }
+  @keyframes rise { from { transform: translateY(8px); } to { transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .qcard { transition: none; } .fade-in { animation: none; } .btn { transition: none; } }
+</style>
+
+<main class="table" id="app" aria-live="polite"></main>
+
+<script>
+(() => {
+  // Each pair: the question most players get, then the odd one out's question.
+  // Pairs are written so honest answers land in the same range.
+  const PAIRS = [
+    ["How many hours of sleep do you need to feel human?", "How many hours could you spend at a theme park before you're done?"],
+    ["How many cups of coffee or tea do you have in a day?", "How many times a day do you open the fridge?"],
+    ["At what age did you get your first phone?", "At what age should someone be allowed to drive?"],
+    ["How many people would you invite to your birthday dinner?", "How many people make a good road trip crew?"],
+    ["How many pairs of shoes do you own?", "How many apps are on your phone's home screen?"],
+    ["How many minutes is a reasonable shower?", "How many minutes would you queue for amazing food?"],
+    ["Rate pineapple on pizza out of 10.", "Rate your singing voice out of 10."],
+    ["How many times have you been on a plane in the last year?", "How many times have you been to the dentist in the last year?"],
+    ["How much would you spend on the perfect pair of sneakers? ($)", "How much would you pay to see your favourite artist live? ($)"],
+    ["What time do you go to bed on a Saturday?", "What time should a good party wind down?"],
+    ["How many days could you go without your phone?", "How many days could you go camping without a shower?"],
+    ["Rate how competitive you are out of 10.", "Rate how spicy you like your food out of 10."],
+    ["How old do you feel?", "What's the perfect age to be?"],
+    ["How many kids would you like to have?", "How many pets would you have if money didn't matter?"],
+    ["How many times have you watched your favourite movie?", "How many times have you moved house?"],
+    ["Out of 10, how much do you love the beach?", "Out of 10, how good are you at swimming?"],
+    ["What's the perfect temperature for a summer day? (°C)", "What temperature do you set the heater to? (°C)"],
+    ["How many slices of pizza can you eat in one sitting?", "How many tacos could you eat in one sitting?"],
+    ["How many minutes late still counts as on time?", "How many minutes does it take you to get ready to go out?"],
+    ["Name a food you could eat every day.", "Name a food you'd bring to a potluck."],
+    ["Name an animal you'd want as a pet.", "Name an animal you'd see on a farm."],
+    ["Name a place you'd love to go on holiday.", "Name a place you'd go on a honeymoon."],
+    ["Name a celebrity you'd want to have dinner with.", "Name a celebrity you'd trust to babysit."],
+    ["What's the best pizza topping?", "What's the best sandwich filling?"],
+    ["Name a sport you wish you were good at.", "Name a sport you'd happily watch on TV."],
+    ["Name a movie everyone should see.", "Name a movie you'd watch on a long flight."],
+    ["What's your go-to karaoke song?", "What song gets a party going?"],
+    ["Name a job you'd be terrible at.", "Name a job you'd quit on day one."],
+    ["What's the best breakfast food?", "What's the best hangover food?"],
+    ["Name a superpower you'd want.", "Name a superpower that would help you at work."],
+    ["Name one thing you'd take to a desert island.", "Name one thing you'd pack for a weekend away."],
+    ["Name something you're scared of.", "Name something that makes you jump in a horror movie."],
+    ["Name a smell you love.", "Name a smell that reminds you of being a kid."],
+    ["What's the best day of the week?", "What's the best day of the week for a party?"],
+    ["Name a TV show you could rewatch forever.", "Name a TV show you'd recommend to a friend."],
+    ["Name a dessert you can't resist.", "Name a dessert you'd make for a dinner party."],
+    ["Name an app you use every day.", "Name the last app you'd ever delete."],
+    ["Name a colour that suits you.", "Name a colour you'd paint your bedroom."],
+    ["Name a city you'd love to live in.", "Name a city with great food."],
+    ["Rate how good a cook you are out of 10.", "Rate how good a driver you are out of 10."],
+    ["How many close friends do you have?", "How many people are in your family group chat?"],
+    ["Name a car you'd love to own.", "Name a car you'd take on a road trip."],
+    ["How many hours could you binge a show in one go?", "How many hours is the perfect road trip day?"],
+    ["What's the best season of the year?", "What's the best season for a wedding?"],
+    ["Name something you always forget.", "Name something you always lose."],
+    ["What's a fair price for a coffee? ($)", "What's a fair price for a muffin? ($)"],
+    ["Name a famous person you look like.", "Name a famous person who'd play you in a movie."],
+    ["How many times have you broken a bone?", "How many times have you been to the emergency department?"],
+    ["What's the best fast food chain?", "Where's the best place for a late-night snack?"],
+    ["Name a word you say too much.", "Name a word that annoys you."],
+    ["How many hours a day are you on your phone?", "How many hours a day do you spend eating?"],
+    ["Name a hobby you'd love to take up.", "Name a hobby you'd do on a rainy day."],
+  ];
+  const TALK_SECONDS = 90;
+  const KEY = "odd-one-asked:names";
+
+  const app = document.getElementById("app");
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  const shuffle = a => { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
+
+  let savedNames = [], savedPhones = [], savedMode = "one";
+  try {
+    savedNames = JSON.parse(localStorage.getItem(KEY) || "[]");
+    savedPhones = JSON.parse(localStorage.getItem(KEY + ":phones") || "[]");
+    savedMode = localStorage.getItem(KEY + ":mode") || "one";
+  } catch (e) {}
+
+  // Texted cards: each friend's question travels inside their link, lightly scrambled
+  // so it can't be read off the message preview. Links point at the public copy.
+  const PUBLIC_URL = "https://odd-one-asked.vercel.app/";
+  const BASE = /^https?:$/.test(location.protocol) && !/claude|claudeusercontent/.test(location.hostname) ? location.origin + location.pathname : PUBLIC_URL;
+  const SALT = "felt-and-marigold";
+  const pack = obj => {
+    const bytes = new TextEncoder().encode(JSON.stringify(obj)).map((b, i) => b ^ SALT.charCodeAt(i % SALT.length));
+    return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  };
+  const unpack = str => {
+    const bin = atob(str.replace(/-/g, "+").replace(/_/g, "/"));
+    const bytes = Uint8Array.from(bin, (c, i) => c.charCodeAt(0) ^ SALT.charCodeAt(i % SALT.length));
+    return JSON.parse(new TextDecoder().decode(bytes));
+  };
+  const cardLink = i => BASE + "#c=" + pack({ n: S.players[i], q: i === S.odd ? S.pair[1] : S.pair[0], r: S.round, g: S.game });
+  const smsHref = (phone, body) => `sms:${(phone || "").replace(/[^\d+]/g, "")}?&body=${encodeURIComponent(body)}`;
+
+  let S;
+  let ticker = null;
+
+  function fresh() {
+    return { screen: "setup", mode: savedMode, phones: savedPhones.slice(), sent: [], game: "", count: Math.max(3, Math.min(12, savedNames.length || 4)), names: savedNames.slice(),
+      players: [], scores: [], deck: [], round: 0, pair: null, odd: -1, turn: 0, answers: [], vote: -1, deltas: [], talkLeft: TALK_SECONDS };
+  }
+
+  function playerName(i) { return (S.names[i] || "").trim() || `Player ${i + 1}`; }
+
+  function render() {
+    clearInterval(ticker); ticker = null;
+    const top = `<header class="top"><div class="wordmark"><span class="pip" aria-hidden="true"></span>Odd One Asked</div>${S.round ? `<span class="round-tag">ROUND ${S.round}</span>` : ""}</header>`;
+    const views = { setup, handoff, ask, reveal, verdict, send };
+    app.innerHTML = top + `<section class="stack fade-in">${views[S.screen]()}</section>`;
+    wire[S.screen] && wire[S.screen]();
+  }
+
+  // ---------- Setup ----------
+  function setup() {
+    const texting = S.mode === "text";
+    const nameInput = i => `<input id="name-${i}" data-i="${i}" maxlength="16" autocomplete="off" placeholder="${texting && i === 0 ? "You" : "Player " + (i + 1)}" value="${esc(S.names[i] || "")}" aria-label="Name for player ${i + 1}">`;
+    const inputs = Array.from({ length: S.count }, (_, i) => texting
+      ? `<div class="pair">${nameInput(i)}<input class="phone" type="tel" inputmode="tel" data-i="${i}" autocomplete="off" placeholder="${i === 0 ? "Your number (optional)" : "Mobile number"}" value="${esc(S.phones[i] || "")}" aria-label="Mobile number for player ${i + 1}"></div>`
+      : nameInput(i)).join("");
+    return `
+      <h1>Everyone gets a question. One of you gets a different one.</h1>
+      <p class="lede">Answer, then defend your answer. The odd one out has to blend in; everyone else has to spot them.</p>
+      <div class="stack">
+        <span class="label">How are you playing?</span>
+        <div class="modes" role="group" aria-label="How are you playing?">
+          <button type="button" data-mode="one" aria-pressed="${!texting}">Pass one phone</button>
+          <button type="button" data-mode="text" aria-pressed="${texting}">Text it to friends</button>
+        </div>
+      </div>
+      <div class="stack">
+        <span class="label">How many players?</span>
+        <div class="stepper">
+          <button type="button" id="less" aria-label="Fewer players" ${S.count <= 3 ? "disabled" : ""}>−</button>
+          <output id="count">${S.count}<small>players</small></output>
+          <button type="button" id="more" aria-label="More players" ${S.count >= 12 ? "disabled" : ""}>+</button>
+        </div>
+      </div>
+      <div class="stack">
+        <span class="label">${texting ? "Names and mobile numbers" : "Names (optional)"}</span>
+        <div class="names ${texting ? "texting" : ""}">${inputs}</div>
+        ${texting ? `<p class="lede" style="font-size:15px">Each friend gets a text from your phone with a link to their secret question. Player 1 is you: open your own card on this phone.</p>` : ""}
+      </div>
+      <ol class="rules">
+        <li>${texting ? "Everyone gets a text with their secret question. Hold the card to read it." : "Pass the phone round. Hold the card to read your question, then type your answer."}</li>
+        <li>One player's question is different, but the answers sound similar.</li>
+        <li>${texting ? "Say your answers out loud, then reveal the main question." : "All answers are revealed with the main question."} Everyone justifies theirs.</li>
+        <li>Vote for the odd one out. Catch them and everyone else scores 1. If they slip through, they score 2.</li>
+      </ol>
+      <button class="btn" id="start" type="button">${texting ? "Deal and text the cards" : "Deal the cards"}</button>`;
+  }
+
+  // ---------- Pass the phone ----------
+  function handoff() {
+    return `
+      <div class="handoff">
+        <span class="label">Pass the phone to</span>
+        <div class="who">${esc(S.players[S.turn])}</div>
+        <p class="lede">Make sure nobody else can see the screen.</p>
+      </div>
+      <button class="btn" id="ready" type="button">I'm ${esc(S.players[S.turn])}, show my card</button>
+      <p class="peek-note">${S.turn + 1} of ${S.players.length}</p>`;
+  }
+
+  function ask() {
+    const q = S.turn === S.odd ? S.pair[1] : S.pair[0];
+    return `
+      <div class="card-wrap">
+        <div class="qcard" id="card" role="button" tabindex="0" aria-label="Press and hold to read your question">
+          <div class="face back"><div class="hold"><span class="ring" aria-hidden="true">✋</span>Press and hold<br>to read your question</div></div>
+          <div class="face front">
+            <span class="corner">${esc(S.players[S.turn]).toUpperCase()} · KEEP IT SECRET</span>
+            <p class="q">${esc(q)}</p>
+            <span class="hint">Let go to hide it again.</span>
+          </div>
+        </div>
+      </div>
+      <div class="answer-row">
+        <label class="label" for="answer">Your answer</label>
+        <input id="answer" maxlength="40" autocomplete="off" placeholder="Short and honest">
+        <button class="btn" id="lock" type="button" disabled>Lock in my answer</button>
+      </div>`;
+  }
+
+  // ---------- Reveal, talk, vote ----------
+  function send() {
+    const rows = S.players.map((p, i) => {
+      const body = `${p}, here's your secret question for Odd One Asked (round ${S.round}). Don't show anyone: ${cardLink(i)}`;
+      const phone = (S.phones[i] || "").trim();
+      const own = i === 0;
+      return `<div class="send-row ${S.sent[i] ? "done" : ""}">
+        <div><span class="who2">${esc(p)}${S.sent[i] ? " ✓" : ""}</span><span class="num">${own ? "you, on this phone" : esc(phone || "no number, pick in Messages")}</span></div>
+        <div class="acts">${own
+          ? `<a class="btn small" data-i="${i}" href="${esc(cardLink(i))}" target="_blank" rel="noopener">My card</a>`
+          : `<a class="btn small" data-i="${i}" href="${esc(smsHref(phone, body))}">Text</a>${navigator.share ? `<button class="btn small ghost" type="button" data-share="${i}">Share</button>` : ""}`}</div>
+      </div>`;
+    }).join("");
+    const done = S.sent.filter(Boolean).length;
+    return `
+      <h2>Send everyone their card</h2>
+      <p class="lede">Tap <b>Text</b> for each friend. Your Messages app opens with their link ready; just hit send. Only the odd one out's link has a different question.</p>
+      <div class="send-list">${rows}</div>
+      <p class="peek-note">${done} of ${S.players.length} sent</p>
+      <button class="btn" id="allsent" type="button">Everyone has their question</button>`;
+  }
+
+  function reveal() {
+    const rows = S.players.map((p, i) => `
+      <div class="ans pick ${S.vote === i ? "chosen" : ""}" data-i="${i}" role="button" tabindex="0" aria-pressed="${S.vote === i}">
+        <span class="name">${esc(p)}</span><span class="said">${esc(S.answers[i] || "")}</span>
+      </div>`).join("");
+    const m = Math.floor(S.talkLeft / 60), s = String(S.talkLeft % 60).padStart(2, "0");
+    return `
+      ${S.mode === "text" ? `<p class="lede">Go round the group: everyone says their answer out loud, then explain it once you've all seen the question.</p>` : ""}
+      <div class="asked"><span class="label">Everyone (well, almost) was asked</span><p class="q">${esc(S.pair[0])}</p></div>
+      <div class="timer">
+        <div><span class="label">Justify your answers</span><div class="clock ${S.talkLeft <= 10 ? "low" : ""}" id="clock">${m}:${s}</div></div>
+        <button class="btn small ghost" id="talk" type="button">${ticker ? "Pause" : S.talkLeft === TALK_SECONDS ? "Start timer" : "Resume"}</button>
+      </div>
+      <span class="label">Tap who you think got a different question</span>
+      <div class="answers" id="answers">${rows}</div>
+      <button class="btn" id="accuse" type="button" ${S.vote < 0 ? "disabled" : ""}>${S.vote < 0 ? "Pick a suspect" : `Accuse ${esc(S.players[S.vote])}`}</button>`;
+  }
+
+  function verdict() {
+    const caught = S.vote === S.odd;
+    const rows = S.players.map((p, i) => `
+      <div class="ans ${i === S.odd ? "odd" : ""}">
+        <span class="name">${esc(p)}${i === S.odd ? '<span class="tag">Odd one</span>' : ""}</span><span class="said">${esc(S.answers[i] || "")}</span>
+      </div>`).join("");
+    const order = S.players.map((p, i) => i).sort((a, b) => S.scores[b] - S.scores[a]);
+    const board = order.map(i => `<li><span>${esc(S.players[i])}</span><span class="delta">${S.deltas[i] ? "+" + S.deltas[i] : ""}</span><span class="pts">${S.scores[i]}</span></li>`).join("");
+    return `
+      <div class="verdict">
+        <span class="label">${caught ? "Caught" : "Got away with it"}</span>
+        <div class="big ${caught ? "win" : "lose"}">${caught ? `It was ${esc(S.players[S.odd])}!` : `It wasn't ${esc(S.players[S.vote])}. It was ${esc(S.players[S.odd])}.`}</div>
+      </div>
+      <div class="oddq"><span class="label">${esc(S.players[S.odd])}'s question was</span><p class="q">${esc(S.pair[1])}</p></div>
+      <div class="answers">${rows}</div>
+      <span class="label">Scores</span>
+      <ol class="scores">${board}</ol>
+      <div class="row">
+        <button class="btn" id="next" type="button">Next round</button>
+        <button class="btn ghost" id="restart" type="button">New game</button>
+      </div>`;
+  }
+
+  // ---------- Game flow ----------
+  function deal() {
+    if (!S.deck.length) S.deck = shuffle(PAIRS.map((_, i) => i));
+    S.pair = PAIRS[S.deck.pop()];
+    S.odd = Math.floor(Math.random() * S.players.length);
+    S.round += 1; S.turn = 0; S.answers = []; S.vote = -1; S.deltas = []; S.talkLeft = TALK_SECONDS;
+    S.sent = []; S.game = S.game || Math.random().toString(36).slice(2, 7);
+    S.screen = S.mode === "text" ? "send" : "handoff";
+    render();
+  }
+
+  const wire = {
+    setup() {
+      const keepOne = inp => { (inp.classList.contains("phone") ? S.phones : S.names)[+inp.dataset.i] = inp.value; };
+      const keepNames = () => app.querySelectorAll(".names input").forEach(keepOne);
+      app.querySelectorAll(".names input").forEach(inp => inp.addEventListener("input", () => keepOne(inp)));
+      app.querySelectorAll(".modes button").forEach(b => b.onclick = () => { keepNames(); S.mode = b.dataset.mode; try { localStorage.setItem(KEY + ":mode", S.mode); } catch (e) {} render(); });
+      document.getElementById("less").onclick = () => { keepNames(); S.count = Math.max(3, S.count - 1); render(); };
+      document.getElementById("more").onclick = () => { keepNames(); S.count = Math.min(12, S.count + 1); render(); };
+      document.getElementById("start").onclick = () => {
+        keepNames();
+        S.names = S.names.slice(0, S.count);
+        S.players = Array.from({ length: S.count }, (_, i) => playerName(i));
+        S.scores = S.players.map(() => 0);
+        S.phones = S.phones.slice(0, S.count);
+        if (S.mode === "text" && !(S.names[0] || "").trim()) S.players[0] = "You";
+        if (S.mode === "text") {
+          const missing = S.players.filter((_, i) => i > 0 && !(S.phones[i] || "").trim()).length;
+          if (missing && !S.warned) { S.warned = true; const b = document.getElementById("start"); b.textContent = `${missing} without a number. Deal anyway`; return; }
+        }
+        try { localStorage.setItem(KEY, JSON.stringify(S.names)); localStorage.setItem(KEY + ":phones", JSON.stringify(S.phones)); } catch (e) {}
+        deal();
+      };
+    },
+    send() {
+      app.querySelectorAll(".send-row a[data-i]").forEach(a => a.addEventListener("click", () => { S.sent[+a.dataset.i] = true; setTimeout(render, 400); }));
+      app.querySelectorAll("[data-share]").forEach(b => b.onclick = async () => {
+        const i = +b.dataset.share;
+        try { await navigator.share({ title: "Odd One Asked", text: `${S.players[i]}, your secret question (round ${S.round}). Don't show anyone:`, url: cardLink(i) }); S.sent[i] = true; render(); } catch (e) {}
+      });
+      document.getElementById("allsent").onclick = () => { S.screen = "reveal"; render(); };
+    },
+    handoff() { document.getElementById("ready").onclick = () => { S.screen = "ask"; render(); }; },
+    ask() {
+      const card = document.getElementById("card"), input = document.getElementById("answer"), lock = document.getElementById("lock");
+      let seen = false;
+      const show = e => { e.preventDefault(); card.classList.add("up"); seen = true; lock.disabled = !(seen && input.value.trim()); };
+      const hide = () => card.classList.remove("up");
+      card.addEventListener("pointerdown", show);
+      ["pointerup", "pointerleave", "pointercancel"].forEach(ev => card.addEventListener(ev, hide));
+      card.addEventListener("keydown", e => { if (e.key === " " || e.key === "Enter") show(e); });
+      card.addEventListener("keyup", hide);
+      card.addEventListener("contextmenu", e => e.preventDefault());
+      input.addEventListener("input", () => { lock.disabled = !(seen && input.value.trim()); });
+      input.addEventListener("keydown", e => { if (e.key === "Enter" && !lock.disabled) lock.click(); });
+      lock.onclick = () => {
+        S.answers[S.turn] = input.value.trim();
+        S.turn += 1;
+        S.screen = S.turn < S.players.length ? "handoff" : "reveal";
+        render();
+      };
+    },
+    reveal() {
+      const pick = el => { S.vote = +el.dataset.i; const running = !!ticker; render(); if (running) startTalk(); };
+      app.querySelectorAll(".ans.pick").forEach(el => {
+        el.onclick = () => pick(el);
+        el.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(el); } };
+      });
+      document.getElementById("talk").onclick = () => { if (ticker) { clearInterval(ticker); ticker = null; render(); } else { if (S.talkLeft <= 0) S.talkLeft = TALK_SECONDS; startTalk(); } };
+      document.getElementById("accuse").onclick = () => {
+        const caught = S.vote === S.odd;
+        S.deltas = S.players.map((_, i) => caught ? (i === S.odd ? 0 : 1) : (i === S.odd ? 2 : 0));
+        S.scores = S.scores.map((v, i) => v + S.deltas[i]);
+        S.screen = "verdict";
+        render();
+      };
+    },
+    verdict() {
+      document.getElementById("next").onclick = deal;
+      document.getElementById("restart").onclick = () => { savedNames = S.names; S = fresh(); render(); };
+    },
+  };
+
+  function startTalk() {
+    const btn = document.getElementById("talk");
+    if (btn) btn.textContent = "Pause";
+    ticker = setInterval(() => {
+      S.talkLeft = Math.max(0, S.talkLeft - 1);
+      const c = document.getElementById("clock");
+      if (c) { c.textContent = `${Math.floor(S.talkLeft / 60)}:${String(S.talkLeft % 60).padStart(2, "0")}`; c.classList.toggle("low", S.talkLeft <= 10); }
+      if (S.talkLeft <= 0) { clearInterval(ticker); ticker = null; const b = document.getElementById("talk"); if (b) b.textContent = "Restart timer"; }
+    }, 1000);
+  }
+
+  // Keep a game in progress if the page is updated while people are playing.
+  function cardOnly(c) {
+    app.innerHTML = `<header class="top"><div class="wordmark"><span class="pip" aria-hidden="true"></span>Odd One Asked</div><span class="round-tag">ROUND ${+c.r || 1}</span></header>
+      <section class="stack fade-in">
+        <h2>${esc(c.n)}, here's your card.</h2>
+        <p class="lede">Keep your screen hidden. Hold the card to read your question, work out your answer, and get ready to defend it.</p>
+        <div class="card-wrap">
+          <div class="qcard" id="card" role="button" tabindex="0" aria-label="Press and hold to read your question">
+            <div class="face back"><div class="hold"><span class="ring" aria-hidden="true">✋</span>Press and hold<br>to read your question</div></div>
+            <div class="face front">
+              <span class="corner">${esc(c.n).toUpperCase()} · KEEP IT SECRET</span>
+              <p class="q">${esc(c.q)}</p>
+              <span class="hint">Let go to hide it again.</span>
+            </div>
+          </div>
+        </div>
+        <p class="peek-note">Someone might have a different question. Is it you?</p>
+      </section>`;
+    const card = document.getElementById("card");
+    const show = e => { e.preventDefault(); card.classList.add("up"); };
+    const hide = () => card.classList.remove("up");
+    card.addEventListener("pointerdown", show);
+    ["pointerup", "pointerleave", "pointercancel"].forEach(ev => card.addEventListener(ev, hide));
+    card.addEventListener("keydown", e => { if (e.key === " " || e.key === "Enter") show(e); });
+    card.addEventListener("keyup", hide);
+    card.addEventListener("contextmenu", e => e.preventDefault());
+  }
+  const m = location.hash.match(/^#c=([\w-]+)/);
+  if (m) { try { cardOnly(unpack(m[1])); return; } catch (e) {} }
+
+  const start = data => { S = data && data.S ? data.S : fresh(); render(); };
+  window.claude?.hot?.snapshot?.(() => ({ S }));
+  window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+})();
+</script>
