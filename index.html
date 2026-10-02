@@ -217,6 +217,51 @@
     ["How many hours a day are you on your phone?", "How many hours a day do you spend eating?"],
     ["Name a hobby you'd love to take up.", "Name a hobby you'd do on a rainy day."],
   ];
+  // Flirty deck (18+). Same rule: both questions should draw answers in the same range.
+  const SPICY = [
+    ["How many people have you kissed?", "How many people have you had a crush on?"],
+    ["How many people have you slept with?", "How many people have you dated?"],
+    ["Rate your kissing skills out of 10.", "Rate your flirting skills out of 10."],
+    ["Rate how good you are in bed out of 10.", "Rate how good a dancer you are out of 10."],
+    ["Rate how kinky you are out of 10.", "Rate how adventurous you are out of 10."],
+    ["Rate how much of a tease you are out of 10.", "Rate how jealous you get out of 10."],
+    ["Rate your sexting game out of 10.", "Rate your pickup lines out of 10."],
+    ["How many dates before you'd sleep with someone?", "How many dates before you'd introduce them to your friends?"],
+    ["How many times a week is the perfect amount of sex?", "How many times a week should you see the person you're dating?"],
+    ["How many minutes should foreplay last?", "How many minutes is a perfect make-out session?"],
+    ["How many minutes is the ideal quickie?", "How many minutes is the ideal power nap?"],
+    ["How many hours after a hookup should you text them?", "How many hours should you wait to reply to a flirty text?"],
+    ["How many people in this room would you kiss?", "How many people in this room would you share a bed with (just sleeping)?"],
+    ["How many drinks before you start flirting?", "How many drinks before you text your ex?"],
+    ["How many people have you kissed in one night?", "How many numbers have you got in one night?"],
+    ["How many times have you sent a nude?", "How many times have you drunk-texted someone you shouldn't have?"],
+    ["How many times have you been caught in the act?", "How many times have you been caught lying to a partner?"],
+    ["How many months could you go without sex?", "How many months could you go without alcohol?"],
+    ["How many dating apps have you been on?", "How many exes do you still follow on socials?"],
+    ["How many first dates have you been on in the last year?", "How many times have you been ghosted?"],
+    ["What's the biggest age gap you'd hook up with? (years)", "What's the biggest age gap you'd date? (years)"],
+    ["At what age did you lose your virginity?", "At what age did you have your first relationship?"],
+    ["Name your favourite sex position.", "Name your favourite sleeping position."],
+    ["Name a body part you find most attractive on someone.", "Name the first thing you notice about someone."],
+    ["Where on your body do you love being kissed?", "Where on your body are you most ticklish?"],
+    ["Name somewhere other than a bed you've hooked up.", "Name somewhere other than a bed you've fallen asleep."],
+    ["Name the wildest place you'd hook up.", "Name the most romantic place for a date."],
+    ["Name a celebrity you'd sleep with.", "Name a celebrity you'd marry."],
+    ["Name a famous person who'd be great in bed.", "Name a famous person who'd be a great first date."],
+    ["Name something you want to try in the bedroom.", "Name something on your bucket list."],
+    ["Name a role-play character you'd play.", "Name a Halloween costume you'd wear."],
+    ["Name a song you'd put on in the bedroom.", "Name a song for a slow dance."],
+    ["Name a food that's sexy.", "Name a food you'd feed someone on a date."],
+    ["What colour underwear is the sexiest?", "What colour looks best on you?"],
+    ["Name a piece of clothing that's an instant turn-on.", "Name what you'd wear on a first date."],
+    ["What's the sexiest accent?", "What accent would you love to have?"],
+    ["Name something that instantly turns you off.", "Name a first-date red flag."],
+    ["Name a pet name you'd want whispered in bed.", "Name a pet name you'd call a partner."],
+    ["What time of day is best for sex?", "What time of day are you at your best?"],
+    ["Name the sexiest job someone can have.", "Name a job that makes someone more dateable."],
+    ["What's your biggest turn-on?", "What do you look for in a partner?"],
+    ["Where's the best place to get frisky on holiday?", "Where's the best place to go on holiday?"],
+  ];
   const TALK_SECONDS = 90;
   const KEY = "odd-one-asked:names";
 
@@ -224,11 +269,12 @@
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
   const shuffle = a => { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
 
-  let savedNames = [], savedPhones = [], savedMode = "one";
+  let savedNames = [], savedPhones = [], savedMode = "one", savedPack = "spicy";
   try {
     savedNames = JSON.parse(localStorage.getItem(KEY) || "[]");
     savedPhones = JSON.parse(localStorage.getItem(KEY + ":phones") || "[]");
     savedMode = localStorage.getItem(KEY + ":mode") || "one";
+    savedPack = localStorage.getItem(KEY + ":pack") || "spicy";
   } catch (e) {}
 
   // Texted cards: each friend's question travels inside their link, lightly scrambled
@@ -253,7 +299,7 @@
   let ticker = null;
 
   function fresh() {
-    return { screen: "setup", mode: savedMode, phones: savedPhones.slice(), sent: [], game: "", count: Math.max(3, savedNames.length || 4), names: savedNames.slice(),
+    return { screen: "setup", mode: savedMode, pack: savedPack, deckPack: "", phones: savedPhones.slice(), sent: [], game: "", count: Math.max(3, savedNames.length || 4), names: savedNames.slice(),
       players: [], scores: [], deck: [], round: 0, pair: null, odd: -1, turn: 0, answers: [], vote: -1, deltas: [], talkLeft: TALK_SECONDS };
   }
 
@@ -283,6 +329,13 @@
         <div class="modes" role="group" aria-label="How are you playing?">
           <button type="button" data-mode="one" aria-pressed="${!texting}">Pass one phone</button>
           <button type="button" data-mode="text" aria-pressed="${texting}">Text it to friends</button>
+        </div>
+      </div>
+      <div class="stack">
+        <span class="label">Which questions?</span>
+        <div class="modes packs" role="group" aria-label="Which questions?">
+          <button type="button" data-pack="spicy" aria-pressed="${S.pack !== "classic"}">Flirty 🔥 18+</button>
+          <button type="button" data-pack="classic" aria-pressed="${S.pack === "classic"}">Classic</button>
         </div>
       </div>
       <div class="stack">
@@ -407,8 +460,9 @@
 
   // ---------- Game flow ----------
   function deal() {
-    if (!S.deck.length) S.deck = shuffle(PAIRS.map((_, i) => i));
-    S.pair = PAIRS[S.deck.pop()];
+    const bank = S.pack === "classic" ? PAIRS : SPICY;
+    if (!S.deck.length || S.deckPack !== S.pack) { S.deck = shuffle(bank.map((_, i) => i)); S.deckPack = S.pack; }
+    S.pair = bank[S.deck.pop()];
     S.odd = Math.floor(Math.random() * S.players.length);
     S.round += 1; S.turn = 0; S.answers = []; S.vote = -1; S.deltas = []; S.talkLeft = TALK_SECONDS;
     S.sent = []; S.game = S.game || Math.random().toString(36).slice(2, 7);
@@ -421,7 +475,8 @@
       const keepOne = inp => { (inp.classList.contains("phone") ? S.phones : S.names)[+inp.dataset.i] = inp.value; };
       const keepNames = () => app.querySelectorAll(".names input").forEach(keepOne);
       app.querySelectorAll(".names input").forEach(inp => inp.addEventListener("input", () => keepOne(inp)));
-      app.querySelectorAll(".modes button").forEach(b => b.onclick = () => { keepNames(); S.mode = b.dataset.mode; try { localStorage.setItem(KEY + ":mode", S.mode); } catch (e) {} render(); });
+      app.querySelectorAll(".packs button").forEach(b => b.onclick = () => { keepNames(); S.pack = b.dataset.pack; try { localStorage.setItem(KEY + ":pack", S.pack); } catch (e) {} render(); });
+      app.querySelectorAll(".modes:not(.packs) button").forEach(b => b.onclick = () => { keepNames(); S.mode = b.dataset.mode; try { localStorage.setItem(KEY + ":mode", S.mode); } catch (e) {} render(); });
       document.getElementById("less").onclick = () => { keepNames(); S.count = Math.max(3, S.count - 1); render(); };
       const addPlayer = () => {
         keepNames(); S.count += 1; S.warned = false; render();
