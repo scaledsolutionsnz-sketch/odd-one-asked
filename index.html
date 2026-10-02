@@ -3,6 +3,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1E4A42">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Odd One">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta property="og:title" content="Odd One Asked">
+<meta property="og:description" content="Your secret question is waiting. Don't show anyone.">
+<meta property="og:image" content="/icon-512.png">
 <meta name="description" content="A pass-and-play party game: everyone answers a question, one of you secretly got a different one.">
 <title>Odd One Asked</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -40,7 +50,7 @@
     line-height: 1.5;
     padding-inline: 16px;
   }
-  .table { max-width: 520px; margin: 0 auto; padding-block: 20px 40px; display: flex; flex-direction: column; gap: 20px; min-height: 100%; }
+  .table { max-width: 520px; margin: 0 auto; padding-block: max(20px, env(safe-area-inset-top)) max(40px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 20px; min-height: 100%; }
   header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .wordmark { font-family: var(--display); font-weight: 800; font-size: 22px; letter-spacing: -.01em; display: flex; align-items: center; gap: 10px; }
   .wordmark .pip { width: 26px; height: 34px; border-radius: 5px; background: var(--card); position: relative; transform: rotate(-8deg); box-shadow: 8px 2px 0 -1px var(--odd); }
@@ -219,7 +229,7 @@
 
   // Texted cards: each friend's question travels inside their link, lightly scrambled
   // so it can't be read off the message preview. Links point at the public copy.
-  const PUBLIC_URL = "https://odd-one-asked.vercel.app/";
+  const PUBLIC_URL = "https://odd-one-asked-two.vercel.app/";
   const BASE = /^https?:$/.test(location.protocol) && !/claude|claudeusercontent/.test(location.hostname) ? location.origin + location.pathname : PUBLIC_URL;
   const SALT = "felt-and-marigold";
   const pack = obj => {
