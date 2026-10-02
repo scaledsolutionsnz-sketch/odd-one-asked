@@ -233,6 +233,7 @@
 
   // Texted cards: each friend's question travels inside their link, lightly scrambled
   // so it can't be read off the message preview. Links point at the public copy.
+  const CAN_PICK = "contacts" in navigator && "ContactsManager" in window;
   const PUBLIC_URL = "https://odd-one-asked-two.vercel.app/";
   const BASE = /^https?:$/.test(location.protocol) && !/claude|claudeusercontent/.test(location.hostname) ? location.origin + location.pathname : PUBLIC_URL;
   const SALT = "felt-and-marigold";
@@ -295,7 +296,9 @@
       <div class="stack">
         <span class="label">${texting ? "Names and mobile numbers" : "Names (optional)"}</span>
         <div class="names ${texting ? "texting" : ""}">${inputs}</div>
+        ${CAN_PICK ? `<button type="button" class="btn" id="pickc">Choose from my contacts</button>` : ""}
         <button type="button" class="btn ghost" id="addp">+ Add another player</button>
+        ${!CAN_PICK && texting ? `<p class="peek-note" style="text-align:left">Your browser can't open your contacts from a website (iPhone Safari blocks this). Leave a number blank and you'll pick the person in Messages when you tap <b>Text</b>.</p>` : ""}
         ${texting ? `<p class="lede" style="font-size:15px">Each friend gets a text from your phone with a link to their secret question. Player 1 is you: open your own card on this phone.</p>` : ""}
       </div>
       <ol class="rules">
@@ -427,6 +430,32 @@
       };
       document.getElementById("more").onclick = () => { keepNames(); S.count += 1; S.warned = false; render(); };
       document.getElementById("addp").onclick = addPlayer;
+      const pickBtn = document.getElementById("pickc");
+      if (pickBtn) pickBtn.onclick = async () => {
+        keepNames();
+        let picked;
+        try { picked = await navigator.contacts.select(["name", "tel"], { multiple: true }); } catch (e) { return; }
+        const people = (picked || []).map(c => ({
+          name: ((c.name && c.name[0]) || "").trim().slice(0, 16),
+          tel: ((c.tel && c.tel[0]) || "").trim(),
+        })).filter(c => c.name || c.tel);
+        if (!people.length) return;
+        const norm = t => (t || "").replace(/[^\d]/g, "").replace(/^64/, "0").replace(/^0+/, "0");
+        const known = new Set(S.phones.map(norm).filter(Boolean));
+        for (const c of people) {
+          const digits = norm(c.tel);
+          if (digits && known.has(digits)) continue;
+          if (digits) known.add(digits);
+          let i = 1;
+          while (i < S.count && ((S.names[i] || "").trim() || (S.phones[i] || "").trim())) i++;
+          if (i >= S.count) S.count = i + 1;
+          S.names[i] = c.name || `Player ${i + 1}`;
+          S.phones[i] = c.tel;
+        }
+        S.mode = "text"; S.warned = false;
+        try { localStorage.setItem(KEY + ":mode", "text"); } catch (e) {}
+        render();
+      };
       app.querySelectorAll("[data-drop]").forEach(b => b.onclick = () => {
         keepNames();
         const i = +b.dataset.drop;
