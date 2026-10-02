@@ -139,6 +139,10 @@
   .modes button { border: 0; border-radius: 10px; padding: 12px 8px; background: transparent; color: var(--chalk-dim); font: 700 15px var(--body); cursor: pointer; }
   .modes button[aria-pressed="true"] { background: var(--card); color: var(--ink); }
   .names.texting { grid-template-columns: 1fr; }
+  .names .prow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; }
+  .names .prow:not(:has(.drop)) { grid-template-columns: minmax(0, 1fr); }
+  .names .drop { width: 40px; height: 48px; border: 0; border-radius: 10px; background: transparent; color: var(--chalk-dim); font: 600 24px/1 var(--body); cursor: pointer; }
+  .names .drop:hover { background: rgba(255,255,255,.06); color: var(--odd); }
   .names .pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 8px; }
   .send-list { display: grid; gap: 10px; }
   .send-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; padding: 12px 12px 12px 16px; border-radius: 14px; background: var(--felt-deep); border: 2px solid transparent; }
@@ -248,7 +252,7 @@
   let ticker = null;
 
   function fresh() {
-    return { screen: "setup", mode: savedMode, phones: savedPhones.slice(), sent: [], game: "", count: Math.max(3, Math.min(12, savedNames.length || 4)), names: savedNames.slice(),
+    return { screen: "setup", mode: savedMode, phones: savedPhones.slice(), sent: [], game: "", count: Math.max(3, savedNames.length || 4), names: savedNames.slice(),
       players: [], scores: [], deck: [], round: 0, pair: null, odd: -1, turn: 0, answers: [], vote: -1, deltas: [], talkLeft: TALK_SECONDS };
   }
 
@@ -266,9 +270,10 @@
   function setup() {
     const texting = S.mode === "text";
     const nameInput = i => `<input id="name-${i}" data-i="${i}" maxlength="16" autocomplete="off" placeholder="${texting && i === 0 ? "You" : "Player " + (i + 1)}" value="${esc(S.names[i] || "")}" aria-label="Name for player ${i + 1}">`;
-    const inputs = Array.from({ length: S.count }, (_, i) => texting
+    const removeBtn = i => S.count > 3 ? `<button type="button" class="drop" data-drop="${i}" aria-label="Remove player ${i + 1}">×</button>` : "";
+    const inputs = Array.from({ length: S.count }, (_, i) => `<div class="prow">${texting
       ? `<div class="pair">${nameInput(i)}<input class="phone" type="tel" inputmode="tel" data-i="${i}" autocomplete="off" placeholder="${i === 0 ? "Your number (optional)" : "Mobile number"}" value="${esc(S.phones[i] || "")}" aria-label="Mobile number for player ${i + 1}"></div>`
-      : nameInput(i)).join("");
+      : nameInput(i)}${removeBtn(i)}</div>`).join("");
     return `
       <h1>Everyone gets a question. One of you gets a different one.</h1>
       <p class="lede">Answer, then defend your answer. The odd one out has to blend in; everyone else has to spot them.</p>
@@ -284,12 +289,13 @@
         <div class="stepper">
           <button type="button" id="less" aria-label="Fewer players" ${S.count <= 3 ? "disabled" : ""}>−</button>
           <output id="count">${S.count}<small>players</small></output>
-          <button type="button" id="more" aria-label="More players" ${S.count >= 12 ? "disabled" : ""}>+</button>
+          <button type="button" id="more" aria-label="More players">+</button>
         </div>
       </div>
       <div class="stack">
         <span class="label">${texting ? "Names and mobile numbers" : "Names (optional)"}</span>
         <div class="names ${texting ? "texting" : ""}">${inputs}</div>
+        <button type="button" class="btn ghost" id="addp">+ Add another player</button>
         ${texting ? `<p class="lede" style="font-size:15px">Each friend gets a text from your phone with a link to their secret question. Player 1 is you: open your own card on this phone.</p>` : ""}
       </div>
       <ol class="rules">
@@ -414,7 +420,19 @@
       app.querySelectorAll(".names input").forEach(inp => inp.addEventListener("input", () => keepOne(inp)));
       app.querySelectorAll(".modes button").forEach(b => b.onclick = () => { keepNames(); S.mode = b.dataset.mode; try { localStorage.setItem(KEY + ":mode", S.mode); } catch (e) {} render(); });
       document.getElementById("less").onclick = () => { keepNames(); S.count = Math.max(3, S.count - 1); render(); };
-      document.getElementById("more").onclick = () => { keepNames(); S.count = Math.min(12, S.count + 1); render(); };
+      const addPlayer = () => {
+        keepNames(); S.count += 1; S.warned = false; render();
+        const el = document.getElementById(`name-${S.count - 1}`);
+        if (el) { el.scrollIntoView({ block: "center", behavior: "smooth" }); el.focus({ preventScroll: true }); }
+      };
+      document.getElementById("more").onclick = () => { keepNames(); S.count += 1; S.warned = false; render(); };
+      document.getElementById("addp").onclick = addPlayer;
+      app.querySelectorAll("[data-drop]").forEach(b => b.onclick = () => {
+        keepNames();
+        const i = +b.dataset.drop;
+        S.names.splice(i, 1); S.phones.splice(i, 1);
+        S.count = Math.max(3, S.count - 1); S.warned = false; render();
+      });
       document.getElementById("start").onclick = () => {
         keepNames();
         S.names = S.names.slice(0, S.count);
